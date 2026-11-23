@@ -7,6 +7,7 @@
 - owns only Telecom-managed call notifications; self-managed VoIP calls stay with their app or Telecom
 - grouped missed-call notifications sourced from `CallLog` (summary + per-call children)
 - hides the Voicemail tab when the carrier exposes no visual-voicemail service
+- no Firebase/Crashlytics telemetry in this fork
 - Apache-2.0, with upstream attribution in [NOTICE](NOTICE)
 
 Build with JDK 25 for Gradle and a JDK 21 toolchain for the Android modules, as described in the upstream build section below:
