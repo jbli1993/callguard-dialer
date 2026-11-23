@@ -9,12 +9,12 @@
 - hides the Voicemail tab when the carrier exposes no visual-voicemail service
 - Apache-2.0, with upstream attribution in [NOTICE](NOTICE)
 
-Build with JDK 21 + Android SDK, as described in the upstream build section below:
+Build with JDK 25 for Gradle and a JDK 21 toolchain for the Android modules, as described in the upstream build section below:
 
 ```powershell
-$env:JAVA_HOME = 'C:\path\to\jdk-21'
+$env:JAVA_HOME = 'C:\path\to\jdk-25'
 $env:GRADLE_USER_HOME = 'D:\code\opendialer\.gradle-home'
-.\gradlew.bat :app:assembleDebug
+.\gradlew.bat :app:assembleDebug "-Dorg.gradle.java.installations.paths=C:\path\to\jdk-21"
 ```
 
 The fork-specific changes are documented in [CALLGUARD-PATCH.md](CALLGUARD-PATCH.md). The base upstream release is **v0.3.4**.
