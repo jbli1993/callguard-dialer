@@ -7,6 +7,15 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!--
+        Android 11+ 的包可见性：不声明的话，即使 CallGuard 装着、provider 也注册了，
+        ContentResolver.call() 依然抛 IllegalArgumentException("Unknown authority")。
+        这里只声明我们确实要访问的那一个 authority。
+    -->
+    <queries>
+        <provider android:authorities="com.callguard.app.provider" />
+    </queries>
+
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
@@ -91,10 +100,28 @@
             android:name=".feature.inCall.service.CallNotificationManager$CallButtonsListener"
             android:exported="true">
             <intent-filter>
-                <action android:name="dev.alenajam.opendialer.CALL_ACCEPT" />
-                <action android:name="dev.alenajam.opendialer.CALL_DECLINE" />
+                <action android:name="com.callguard.dialer.CALL_ACCEPT" />
+                <action android:name="com.callguard.dialer.CALL_DECLINE" />
             </intent-filter>
         </receiver>
+
+        <!-- Telecom delegates missed-call notifications to the default dialer only when
+             this receiver exists. Without it Telecom posts its own notification, whose
+             implicit call-log intent does not resolve to this dialer. -->
+        <receiver
+            android:name=".feature.inCall.service.MissedCallNotificationReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.action.SHOW_MISSED_CALLS_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Delete intents for the grouped missed-call notifications. -->
+        <receiver
+            android:name=".feature.inCall.service.MissedCallDismissReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
     </application>
 
 </manifest>

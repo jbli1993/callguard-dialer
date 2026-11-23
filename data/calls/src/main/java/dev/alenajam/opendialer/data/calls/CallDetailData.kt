@@ -31,7 +31,8 @@ object CallDetailData {
         Calls.CACHED_LOOKUP_URI,
         Calls.POST_DIAL_DIGITS,
         Calls.CACHED_MATCHED_NUMBER,
-        Calls.CACHED_NUMBER_TYPE
+        Calls.CACHED_NUMBER_TYPE,
+        Calls.PHONE_ACCOUNT_ID
     )
 
     /** Filter out non-video Duo calls. */
@@ -117,6 +118,7 @@ object CallDetailData {
                         matchedNumber = cursor.getString(cursor.getColumnIndexOrThrow(Calls.CACHED_MATCHED_NUMBER)),
                         numberType = phoneType?.type
                             ?: cursor.getInt(cursor.getColumnIndexOrThrow(Calls.CACHED_NUMBER_TYPE)),
+                        phoneAccountId = cursor.getString(cursor.getColumnIndexOrThrow(Calls.PHONE_ACCOUNT_ID)),
                         isVoicemailNumber = type == Calls.OUTGOING_TYPE && voicemailNumbers.any {
                             PhoneNumberUtils.compare(number, it)
                         },

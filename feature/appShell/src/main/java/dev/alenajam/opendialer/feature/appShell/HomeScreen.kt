@@ -1,11 +1,15 @@
 package dev.alenajam.opendialer.feature.appShell
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +23,7 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +50,7 @@ enum class HomeTab {
 data class HomeNavigationItem(
     val label: @Composable () -> Unit,
     val icon: @Composable (selected: Boolean) -> Unit,
-    val content: @Composable (onOpenSettingsSubpage: (Int, String?) -> Unit) -> Unit,
+    val content: @Composable (onOpenSettingsSubpage: (String, String?) -> Unit) -> Unit,
 )
 
 data class HomeScreenConfiguration(
@@ -63,13 +68,21 @@ internal fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddFavorite: () -> Unit = {},
-    onOpenSettingsSubpage: (Int, String?) -> Unit = { _, _ -> },
+    onOpenSettingsSubpage: (String, String?) -> Unit = { _, _ -> },
     onOpenVoicemail: () -> Unit = {},
     configuration: HomeScreenConfiguration = HomeScreenConfiguration(),
 ) {
     var currentTab by rememberSaveable { mutableStateOf(HomeTab.CALLS) }
     var searchQuery by remember { mutableStateOf("") }
     val isSearchActive = searchQuery.isNotEmpty()
+
+    // If the Voicemail tab disappears (no carrier VVM service), do not leave the user on
+    // a content page whose navigation item no longer exists.
+    LaunchedEffect(configuration.showVoicemailInNavigation) {
+        if (!configuration.showVoicemailInNavigation && currentTab == HomeTab.VOICEMAIL) {
+            currentTab = HomeTab.CALLS
+        }
+    }
 
     BackHandler(enabled = isSearchActive) {
         searchQuery = ""
@@ -154,57 +167,73 @@ internal fun HomeScreen(
             ) {}
         },
         bottomBar = {
-            val icons = LocalAppIcons.current
+            val showVoicemail = configuration.showVoicemailInNavigation
+            val twoItemLayout = !showVoicemail && configuration.customNavigationItem == null
+
             NavigationBar {
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.CALLS,
-                    icon = {
-                        AppIcon(
-                            if (currentTab == HomeTab.CALLS) icons.recentsSelected else icons.recents,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    label = { Text(stringResource(R.string.recents)) },
-                    onClick = { currentTab = HomeTab.CALLS },
-                )
-                NavigationBarItem(
-                    selected = currentTab == HomeTab.CONTACTS,
-                    icon = {
-                        AppIcon(
-                            if (currentTab == HomeTab.CONTACTS) icons.contactsSelected else icons.contacts,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    label = { Text(stringResource(R.string.contacts)) },
-                    onClick = { currentTab = HomeTab.CONTACTS },
-                )
-                if (configuration.showVoicemailInNavigation) {
-                    NavigationBarItem(
-                        selected = currentTab == HomeTab.VOICEMAIL,
-                        icon = {
-                            AppIcon(
-                                if (currentTab == HomeTab.VOICEMAIL) icons.voicemailSelected else icons.voicemail,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
+                if (twoItemLayout) {
+                    // Two destinations normally look too sparse stretched across the whole bar.
+                    // Keep them in a compact centered group so the dial FAB still has a clear
+                    // visual anchor on the right.
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.72f),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CallsNavItem(
+                                selected = currentTab == HomeTab.CALLS,
+                                modifier = Modifier.weight(1f),
+                                onClick = { currentTab = HomeTab.CALLS },
                             )
-                        },
-                        label = { Text(stringResource(R.string.voicemail)) },
-                        onClick = { currentTab = HomeTab.VOICEMAIL },
+                            ContactsNavItem(
+                                selected = currentTab == HomeTab.CONTACTS,
+                                modifier = Modifier.weight(1f),
+                                onClick = { currentTab = HomeTab.CONTACTS },
+                            )
+                        }
+                    }
+                } else {
+                    CallsNavItem(
+                        selected = currentTab == HomeTab.CALLS,
+                        onClick = { currentTab = HomeTab.CALLS },
                     )
-                }
-                configuration.customNavigationItem?.let { item ->
-                    NavigationBarItem(
-                        selected = currentTab == HomeTab.CUSTOM,
-                        icon = { item.icon(currentTab == HomeTab.CUSTOM) },
-                        label = item.label,
-                        onClick = { currentTab = HomeTab.CUSTOM },
+                    ContactsNavItem(
+                        selected = currentTab == HomeTab.CONTACTS,
+                        onClick = { currentTab = HomeTab.CONTACTS },
                     )
+                    if (showVoicemail) {
+                        NavigationBarItem(
+                            selected = currentTab == HomeTab.VOICEMAIL,
+                            icon = {
+                                AppIcon(
+                                    if (currentTab == HomeTab.VOICEMAIL) {
+                                        LocalAppIcons.current.voicemailSelected
+                                    } else {
+                                        LocalAppIcons.current.voicemail
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            label = { Text(stringResource(R.string.voicemail)) },
+                            onClick = { currentTab = HomeTab.VOICEMAIL },
+                        )
+                    }
+                    configuration.customNavigationItem?.let { item ->
+                        NavigationBarItem(
+                            selected = currentTab == HomeTab.CUSTOM,
+                            icon = { item.icon(currentTab == HomeTab.CUSTOM) },
+                            label = item.label,
+                            onClick = { currentTab = HomeTab.CUSTOM },
+                        )
+                    }
                 }
             }
-        },
-        floatingActionButton = {
+        },        floatingActionButton = {
             FloatingActionButton(onClick = { onOpenDialpad("") }) {
                 AppIcon(
                     LocalAppIcons.current.dialpad,
@@ -236,4 +265,48 @@ internal fun HomeScreen(
             }
         }
     }
+}
+
+@Composable
+private fun RowScope.CallsNavItem(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val icons = LocalAppIcons.current
+    NavigationBarItem(
+        selected = selected,
+        modifier = modifier,
+        icon = {
+            AppIcon(
+                if (selected) icons.recentsSelected else icons.recents,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        label = { Text(stringResource(R.string.recents)) },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun RowScope.ContactsNavItem(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val icons = LocalAppIcons.current
+    NavigationBarItem(
+        selected = selected,
+        modifier = modifier,
+        icon = {
+            AppIcon(
+                if (selected) icons.contactsSelected else icons.contacts,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        label = { Text(stringResource(R.string.contacts)) },
+        onClick = onClick,
+    )
 }

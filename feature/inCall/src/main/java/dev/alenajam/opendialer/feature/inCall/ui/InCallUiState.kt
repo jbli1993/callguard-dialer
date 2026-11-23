@@ -1,6 +1,7 @@
 package dev.alenajam.opendialer.feature.inCall.ui
 
 import android.telecom.Call
+import dev.alenajam.opendialer.core.common.telecom.SimInfo
 import dev.alenajam.opendialer.feature.inCall.service.CallAudioRouteUiState
 import dev.alenajam.opendialer.feature.inCall.service.OngoingCall
 
@@ -46,6 +47,8 @@ data class InCallUiState(
     val canAddCall: Boolean = false,
     val hasSecondaryCall: Boolean = false,
     val secondaryCallerName: String? = null,
+    /** 双卡时为这通电话的卡，单卡为 null。 */
+    val simInfo: SimInfo? = null,
     val conferenceParticipants: List<ConferenceParticipantUiState> = emptyList()
 )
 

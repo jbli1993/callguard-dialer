@@ -7,7 +7,9 @@ class DetailCall(
     val id: Int,
     val type: CallType,
     val date: Date,
-    val duration: Long
+    val duration: Long,
+    /** 这一通具体走的哪张卡（`PhoneAccountHandle.id`）。历史记录里同一号码可能换卡打过。 */
+    val phoneAccountId: String? = null,
 ) : Serializable {
     companion object {
         fun map(call: DialerCallEntity): DetailCall? {
@@ -18,7 +20,8 @@ class DetailCall(
                     id = call.id,
                     type = it,
                     date = Date(call.date),
-                    duration = call.duration
+                    duration = call.duration,
+                    phoneAccountId = call.phoneAccountId,
                 )
             }
             return null

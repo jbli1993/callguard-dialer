@@ -169,7 +169,10 @@ class CallsHandler @Inject constructor(
                     CallEvent.MissedCall(
                         callerName = ongoingCall.callerName,
                         callerNumber = ongoingCall.callerNumber,
-                        notificationId = ((System.currentTimeMillis() + ongoingCall.sequence) and Int.MAX_VALUE.toLong()).toInt()
+                        notificationId = ((System.currentTimeMillis() + ongoingCall.sequence) and Int.MAX_VALUE.toLong()).toInt(),
+                        selfManaged = ongoingCall.call.details.hasProperty(
+                            Call.Details.PROPERTY_SELF_MANAGED
+                        )
                     )
                 )
             }

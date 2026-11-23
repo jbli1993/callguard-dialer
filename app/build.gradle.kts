@@ -30,7 +30,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "dev.alenajam.opendialer"
+        applicationId = "com.callguard.dialer"
         minSdk = 24
         targetSdk = 37
         versionCode = appVersionCode

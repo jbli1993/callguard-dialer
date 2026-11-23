@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -59,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,14 +73,19 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.alenajam.opendialer.core.common.ui.ContactAvatar
 import dev.alenajam.opendialer.core.common.ui.contactAvatarColorKey
+import dev.alenajam.opendialer.core.common.CallGuardLabelClient
+import dev.alenajam.opendialer.core.common.ExternalLabel
 import dev.alenajam.opendialer.core.common.PermissionUtils
 import dev.alenajam.opendialer.core.common.formatRelativeTime
 import dev.alenajam.opendialer.core.common.telecom.CallAccount
 import dev.alenajam.opendialer.core.common.telecom.CallPlacementResult
+import dev.alenajam.opendialer.core.common.telecom.SimInfo
 import dev.alenajam.opendialer.core.common.ui.CallAccountPicker
 import dev.alenajam.opendialer.core.common.ui.AppIcon
 import dev.alenajam.opendialer.core.common.ui.IconSource
 import dev.alenajam.opendialer.core.common.ui.LocalAppIcons
+import dev.alenajam.opendialer.core.common.ui.SimBadge
+import dev.alenajam.opendialer.core.common.ui.rememberSimInfos
 import dev.alenajam.opendialer.data.calls.CallType
 import dev.alenajam.opendialer.data.calls.ContactInfo
 import dev.alenajam.opendialer.data.calls.DialerCall
@@ -151,6 +158,8 @@ fun CallsScreen(
     var blockedNumbers by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val icons = LocalAppIcons.current
+    // 双卡时才显示 SIM 徽标；单卡返回空 map，不占位
+    val simInfos = rememberSimInfos()
     val filteredCalls = remember(calls.value, selectedFilter) {
         when (selectedFilter) {
             CallFilter.MISSED -> calls.value.filter { it.type == CallType.MISSED || it.type == CallType.REJECTED }
@@ -268,6 +277,7 @@ fun CallsScreen(
                         CallRow(call = call,
                             isOpen = isOpen,
                             isBlocked = isNumberBlocked,
+                            simInfo = call.phoneAccountId?.toIntOrNull()?.let(simInfos::get),
                             today = today,
                             roundTop = index == 0,
                             roundBottom = index == callsForDate.lastIndex,
@@ -495,6 +505,7 @@ private fun CallRow(
     call: DialerCall,
     isOpen: Boolean,
     isBlocked: Boolean,
+    simInfo: SimInfo? = null,
     today: LocalDate = LocalDate.now(),
     roundTop: Boolean,
     roundBottom: Boolean,
@@ -518,6 +529,7 @@ private fun CallRow(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var isNumberBlocked by remember(call.id) { mutableStateOf(isBlocked) }
     val resources = LocalResources.current
+    val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     val callDate = call.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
     val relativeTime = if (callDate == today) formatRelativeTime(call.date)
@@ -531,11 +543,26 @@ private fun CallRow(
     LaunchedEffect(isBlocked) {
         isNumberBlocked = isBlocked
     }
-    val callLabel = if (isNumberBlocked) {
-        stringResource(R.string.blocked)
-    } else {
-        call.contactInfo.type
-            ?.takeIf { call.isContactSaved() }
+    // CallGuard 的标签只对陌生号码查——通讯录里的保留「Mobile · 时间」不变，
+    // 和国产 ROM 的做法一致（有名字就不需要再显示归属地）。
+    var guardLabel by remember(call.id, call.contactInfo.number) {
+        mutableStateOf<ExternalLabel?>(null)
+    }
+    LaunchedEffect(call.id, call.contactInfo.number) {
+        if (!call.isContactSaved() && !call.isAnonymous()) {
+            guardLabel = CallGuardLabelClient.lookup(context, call.contactInfo.number.orEmpty())
+        }
+    }
+
+    val callLabel = when {
+        // 被拦的通话：显示**具体原因**（系统黑名单 / 命中地区…），不再笼统地"已拦截"。
+        // 这里只看 call.type——号码"现在"在不在系统名单里，不该污染历史记录。
+        call.type == CallType.BLOCKED -> when {
+            call.blockReason == 3 -> stringResource(R.string.blocked_system)
+            !guardLabel?.blockReason.isNullOrBlank() -> guardLabel?.blockReason.orEmpty()
+            else -> stringResource(R.string.blocked_by_app)
+        }
+        call.isContactSaved() -> call.contactInfo.type
             ?.let {
                 ContactsContract.CommonDataKinds.Phone.getTypeLabel(
                     resources,
@@ -544,6 +571,8 @@ private fun CallRow(
                 ).toString()
             }
             .orEmpty()
+        // 优先级：精确标签 > 是否骚扰 > 归属地短名
+        else -> guardLabel?.listSummary()?.ifBlank { guardLabel?.regionShort.orEmpty() }.orEmpty()
     }
     val displayNumber = call.contactInfo.formattedNumber
         ?.takeIf { it.isNotBlank() }
@@ -628,16 +657,24 @@ private fun CallRow(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                             )
                         }
+
+                        if (simInfo != null) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            SimBadge(info = simInfo, compact = true)
+                        }
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         val isMissed = call.type == CallType.MISSED || call.type == CallType.REJECTED
-                        val subtitleColor = if (isMissed) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        val labelTone = guardLabel?.tone
+                        val subtitleColor = when {
+                            isMissed -> MaterialTheme.colorScheme.error
+                            labelTone == ExternalLabel.Tone.BAD -> MaterialTheme.colorScheme.error
+                            labelTone == ExternalLabel.Tone.WARN -> MaterialTheme.colorScheme.tertiary
+                            labelTone == ExternalLabel.Tone.GOOD -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
                         }
 
                         AppIcon(
@@ -653,14 +690,32 @@ private fun CallRow(
                             modifier = Modifier.size(14.dp)
                         )
 
+                        if (callLabel.isNotBlank()) {
+                            // 长拦截原因跑马灯滚动，时间固定在右侧不跟着滚
+                            Text(
+                                text = callLabel,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .basicMarquee(
+                                        initialDelayMillis = 1500,
+                                        repeatDelayMillis = 1500,
+                                    ),
+                                maxLines = 1,
+                                softWrap = false,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = subtitleColor,
+                            )
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = subtitleColor,
+                            )
+                        }
                         Text(
-                            text = if (callLabel.isBlank()) {
-                                relativeTime
-                            } else {
-                                stringResource(R.string.call_log_type_time, callLabel, relativeTime)
-                            },
+                            text = relativeTime,
+                            maxLines = 1,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = subtitleColor
+                            color = subtitleColor,
                         )
                     }
                 }

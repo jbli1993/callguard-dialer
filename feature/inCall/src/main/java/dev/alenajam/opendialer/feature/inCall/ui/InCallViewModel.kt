@@ -62,6 +62,7 @@ class InCallViewModel @Inject constructor(
             canAddCall = canAdd && secondary == null,
             hasSecondaryCall = secondary != null,
             secondaryCallerName = secondary?.let { it.callerName ?: it.callerNumber },
+            simInfo = primary?.simInfo,
             conferenceParticipants = allCalls.values
                 .filter { it.isConferenced || conferenceChildren.contains(it.call) }
                 .map {

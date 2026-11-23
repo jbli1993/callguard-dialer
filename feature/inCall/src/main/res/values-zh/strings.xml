@@ -14,6 +14,8 @@
     <string name="notification_ongoing_call_title" comment="Active-call notification title. %1$s is the caller name or phone number.">通话中：%1$s</string>
     <string name="notification_outgoing_call_title" comment="Outgoing-call notification title. %1$s is the contact name or phone number.">正在呼叫：%1$s</string>
     <string name="notification_missed_call_title" comment="Missed-call notification title. %1$s is the caller name or phone number.">来自 %1$s 的未接来电</string>
+    <string name="notification_missed_calls_title" comment="Group summary title for multiple missed calls.">未接来电</string>
+    <string name="notification_missed_calls_count" comment="Missed-call notification subtext. %1$d is the number of missed calls.">%1$d 个未接来电</string>
     <string name="notification_call_back" comment="Notification action that calls back a missed caller.">回拨</string>
     <string name="notification_message" comment="Notification action that starts a text message to the caller.">发短信</string>
     <string name="action_answer" comment="Incoming-call button that answers the call.">接听</string>
@@ -41,4 +43,15 @@
     <string name="action_send" comment="Button that sends the typed quick-response message.">发送</string>
     <string name="action_cancel" comment="Button that closes the quick-response panel without sending a message.">取消</string>
     <string name="write_your_own" comment="Option for composing a custom reply instead of using a preset response.">编写自己的回复…</string>
+    <!-- CallGuard 在线查询状态 -->
+    <string name="callguard_lookup_failed">免费查询失败</string>
+    <string name="callguard_lookup_recheck">用付费接口重查</string>
+    <string name="callguard_lookup_busy">查询中…</string>
+    <string name="callguard_source_free">免费接口</string>
+    <string name="callguard_source_paid">付费接口</string>
+    <string name="callguard_source_builtin">内置号码表</string>
+    <string name="callguard_meta">%1$s · %2$s</string>
+    <string name="callguard_ago_now">刚刚</string>
+    <string name="callguard_ago_hours">%1$d 小时前</string>
+    <string name="callguard_ago_days">%1$d 天前</string>
 </resources>

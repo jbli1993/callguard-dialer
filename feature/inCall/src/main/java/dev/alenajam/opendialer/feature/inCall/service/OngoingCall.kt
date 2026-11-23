@@ -6,6 +6,8 @@ import android.telecom.Call
 import android.telecom.VideoProfile
 import dev.alenajam.opendialer.core.common.CommonUtils
 import dev.alenajam.opendialer.core.common.Contact
+import dev.alenajam.opendialer.core.common.telecom.SimInfo
+import dev.alenajam.opendialer.core.common.telecom.SimInfoResolver
 import dev.alenajam.opendialer.feature.inCall.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,9 @@ data class OngoingCallState(
     val canMerge: Boolean = false,
     val canHold: Boolean = false,
     val canSplit: Boolean = false,
-    val isAnonymous: Boolean = false
+    val isAnonymous: Boolean = false,
+    /** 双卡时为这通电话的卡；单卡 / 没权限为 null，界面不显示。 */
+    val simInfo: SimInfo? = null,
 )
 
 class OngoingCall(
@@ -78,6 +82,7 @@ class OngoingCall(
             it.copy(
                 isConference = isConf,
                 isAnonymous = isAnon,
+                simInfo = SimInfoResolver.resolveForBadge(context, call.details.accountHandle?.id),
                 callerName = when {
                     isConf -> context.getString(R.string.conference_call)
                     isVoicemail -> context.getString(R.string.voicemail)
@@ -164,6 +169,7 @@ class OngoingCall(
     val callerName: String? get() = _state.value.callerName
     val callerNumberLabel: String get() = _state.value.callerNumberLabel
     val callerImageUri: String? get() = _state.value.callerImageUri
+    val simInfo: SimInfo? get() = _state.value.simInfo
     val isConference: Boolean get() = _state.value.isConference
     val isConferenced: Boolean get() = _state.value.isConferenced
     val startTime: Long get() = _state.value.startTime

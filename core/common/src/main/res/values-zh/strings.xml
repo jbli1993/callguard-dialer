@@ -10,4 +10,7 @@
         <item name="array_quick_responses3">现在不方便说话。可以稍后再打来吗？</item>
     </string-array>
     <string name="write_your_own" comment="Option for composing a custom reply instead of using a preset response.">编写自己的回复…</string>
+    <!-- 双卡：通话记录 / 通话界面里标出这通电话走的是哪张卡 -->
+    <string name="sim_badge" comment="Compact SIM badge, e.g. SIM 2. %1$d is the SIM slot number.">卡 %1$d</string>
+    <string name="sim_badge_with_carrier" comment="SIM badge with carrier name, e.g. SIM 2 · China Unicom.">卡 %1$d · %2$s</string>
 </resources>

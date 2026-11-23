@@ -1,11 +1,13 @@
 package dev.alenajam.opendialer.feature.appShell
 
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.telecom.PhoneAccount
+import android.telephony.TelephonyManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -61,6 +63,7 @@ import dev.alenajam.opendialer.feature.settings.SettingsSubpageRoute
 import dev.alenajam.opendialer.feature.settings.SettingsSubpageDestinationRoute
 import dev.alenajam.opendialer.feature.settings.SettingsSubpageScreen
 import dev.alenajam.opendialer.feature.settings.LocalSettingsSubpageNavigator
+import dev.alenajam.opendialer.feature.settings.LocalSettingsRootNavigator
 import dev.alenajam.opendialer.feature.settings.SettingsSubpageNavigator
 import dev.alenajam.opendialer.feature.voicemail.VoicemailScreen
 import kotlinx.serialization.Serializable
@@ -81,8 +84,24 @@ data class HomeScreenCallbacks(
     val onOpenSettings: () -> Unit,
     val onOpenAbout: () -> Unit,
     val onAddFavorite: () -> Unit,
-    val onOpenSettingsSubpage: (Int, String?) -> Unit,
+    val onOpenSettingsSubpage: (String, String?) -> Unit,
     val onOpenVoicemail: () -> Unit,
+)
+
+data class SettingsScreenCallbacks(
+    val onNavigateBack: () -> Unit,
+    val onOpenSubpage: (String, String?) -> Unit,
+    val onOpenQuickResponses: () -> Unit,
+    val onOpenDisplayOptions: () -> Unit,
+)
+
+data class SetupScreenCallbacks(
+    val isDefaultPhoneApp: Boolean,
+    val hasFullScreenIntentAccess: Boolean,
+    val showDefaultPhoneRecovery: Boolean,
+    val onSetAsDefault: () -> Unit,
+    val onOpenAppInfo: () -> Unit,
+    val onEnableFullScreenIntent: () -> Unit,
 )
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -91,7 +110,10 @@ fun DialerApp(
     defaultPhoneManager: DefaultPhoneManager,
     icons: AppIcons = DefaultAppIcons,
     themeExtension: AppThemeExtension = AppThemeExtension(),
+    setupContent: (@Composable (SetupScreenCallbacks) -> Unit)? = null,
     settingsSubpages: List<SettingsSubpage> = emptyList(),
+    settingsContent: (@Composable (SettingsScreenCallbacks) -> Unit)? = null,
+    aboutContent: (@Composable (onNavigateBack: () -> Unit) -> Unit)? = null,
     homeScreenConfiguration: HomeScreenConfiguration = HomeScreenConfiguration(),
     homeContent: (@Composable (HomeScreenCallbacks) -> Unit)? = null,
     dialSearchContent: (@Composable (
@@ -100,6 +122,7 @@ fun DialerApp(
         onDialpadCallStarted: () -> Unit,
         onNavigateBack: () -> Unit,
     ) -> Unit)? = null,
+    callDetailContent: (@Composable (onNavigateBack: () -> Unit) -> Unit)? = null,
     forceLightTheme: Boolean = false,
 ) {
     val navController = rememberNavController()
@@ -144,7 +167,7 @@ fun DialerApp(
         }
 
         if (!isDefaultPhoneApp || !hasFullScreenIntentAccess) {
-            SetupScreen(
+            val setupCallbacks = SetupScreenCallbacks(
                 isDefaultPhoneApp = isDefaultPhoneApp,
                 hasFullScreenIntentAccess = hasFullScreenIntentAccess,
                 showDefaultPhoneRecovery = defaultPhoneRequestWasDenied && !isDefaultPhoneApp,
@@ -171,19 +194,33 @@ fun DialerApp(
                     }
                 },
             )
+            if (setupContent != null) {
+                setupContent(setupCallbacks)
+            } else {
+                SetupScreen(
+                    isDefaultPhoneApp = setupCallbacks.isDefaultPhoneApp,
+                    hasFullScreenIntentAccess = setupCallbacks.hasFullScreenIntentAccess,
+                    showDefaultPhoneRecovery = setupCallbacks.showDefaultPhoneRecovery,
+                    onSetAsDefault = setupCallbacks.onSetAsDefault,
+                    onOpenAppInfo = setupCallbacks.onOpenAppInfo,
+                    onEnableFullScreenIntent = setupCallbacks.onEnableFullScreenIntent,
+                )
+            }
         } else {
             HandleDialIntent(
                 onOpenContactsSearch = { navController.navigate(ContactsSearchRoute(it)) }
             )
             NavHost(navController = navController, startDestination = HomeRoute) {
                 composable<HomeRoute> {
+                    val context = LocalContext.current
+                    val voicemailAvailable = remember(context) { hasVisualVoicemail(context) }
                     val callbacks = HomeScreenCallbacks(
                         onOpenDialpad = { number -> navController.navigate(ContactsSearchRoute(number)) },
                         onOpenHistory = { navController.navigate(CallDetailRoute(callIds = it)) },
                         onOpenSettings = { navController.navigate(SettingsRoute) },
                         onOpenAbout = { navController.navigate(AboutRoute) },
                         onAddFavorite = { navController.navigate(AddFavoriteRoute) },
-                        onOpenSettingsSubpage = { index, payload -> navController.navigate(SettingsSubpageRoute(index, payload)) },
+                        onOpenSettingsSubpage = { pageId, payload -> navController.navigate(SettingsSubpageRoute(pageId, payload)) },
                         onOpenVoicemail = { navController.navigate(VoicemailRoute) },
                     )
                     homeContent?.invoke(callbacks) ?: HomeScreen(
@@ -194,7 +231,10 @@ fun DialerApp(
                         onAddFavorite = callbacks.onAddFavorite,
                         onOpenSettingsSubpage = callbacks.onOpenSettingsSubpage,
                         onOpenVoicemail = callbacks.onOpenVoicemail,
-                        configuration = homeScreenConfiguration,
+                        configuration = homeScreenConfiguration.copy(
+                            showVoicemailInNavigation = homeScreenConfiguration.showVoicemailInNavigation &&
+                                voicemailAvailable
+                        ),
                     )
                 }
                 composable<AddFavoriteRoute> {
@@ -231,19 +271,30 @@ fun DialerApp(
                     )
                 }
                 composable<CallDetailRoute> {
-                    CallDetailScreen(onNavigateBack = { navController.popBackStack() })
+                    callDetailContent?.invoke { navController.popBackStack() }
+                        ?: CallDetailScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable<SettingsRoute> {
-                    SettingsScreen(
+                    val onOpenSubpage = { pageId: String, payload: String? ->
+                        navController.navigate(SettingsSubpageRoute(pageId, payload))
+                    }
+                    val settingsCallbacks = SettingsScreenCallbacks(
                         onNavigateBack = { navController.popBackStack() },
+                        onOpenSubpage = onOpenSubpage,
                         onOpenQuickResponses = { navController.navigate(QuickResponsesRoute) },
                         onOpenDisplayOptions = { navController.navigate(DisplayOptionsRoute) },
+                    )
+                    settingsContent?.invoke(settingsCallbacks) ?: SettingsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onOpenQuickResponses = settingsCallbacks.onOpenQuickResponses,
+                        onOpenDisplayOptions = settingsCallbacks.onOpenDisplayOptions,
                         subpages = settingsSubpages,
-                        onOpenSubpage = { index, payload -> navController.navigate(SettingsSubpageRoute(index, payload)) }
+                        onOpenSubpage = onOpenSubpage,
                     )
                 }
                 composable<AboutRoute> {
-                    AboutScreen(onNavigateBack = { navController.popBackStack() })
+                    aboutContent?.invoke { navController.popBackStack() }
+                        ?: AboutScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable<QuickResponsesRoute> {
                     QuickResponsesScreen(onNavigateBack = { navController.popBackStack() })
@@ -253,39 +304,42 @@ fun DialerApp(
                 }
                 composable<SettingsSubpageRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<SettingsSubpageRoute>()
-                    settingsSubpages.getOrNull(route.index)?.let { page ->
+                    settingsSubpages.firstOrNull { it.id == route.pageId }?.let { page ->
                         SettingsSubpageScreen(
                             page = page,
                             payload = route.payload,
                             onNavigateBack = { navController.popBackStack() },
-                            onNavigateToDestination = { destinationIndex, payload ->
-                                navController.navigate(SettingsSubpageDestinationRoute(route.index, destinationIndex, payload))
+                            onNavigateToDestination = { destinationId, payload ->
+                                navController.navigate(SettingsSubpageDestinationRoute(route.pageId, destinationId, payload))
                             },
-                            onNavigateToSubpage = { subpageIndex, payload ->
-                                navController.navigate(SettingsSubpageRoute(subpageIndex, payload))
+                            onNavigateToSubpage = { pageId, payload ->
+                                navController.navigate(SettingsSubpageRoute(pageId, payload))
                             },
                         )
                     }
                 }
                 composable<SettingsSubpageDestinationRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<SettingsSubpageDestinationRoute>()
-                    settingsSubpages.getOrNull(route.subpageIndex)
+                    settingsSubpages.firstOrNull { it.id == route.pageId }
                         ?.destinations
-                        ?.getOrNull(route.destinationIndex)
+                        ?.firstOrNull { it.id == route.destinationId }
                         ?.let { destination ->
                             CompositionLocalProvider(
                                 LocalSettingsSubpageNavigator provides SettingsSubpageNavigator(
-                                    { destinationIndex, payload ->
+                                    { destinationId, payload ->
                                         navController.navigate(
                                             SettingsSubpageDestinationRoute(
-                                                route.subpageIndex,
-                                                destinationIndex,
+                                                route.pageId,
+                                                destinationId,
                                                 payload,
                                             )
                                         )
                                     },
                                     { navController.popBackStack() },
-                                )
+                                ),
+                                LocalSettingsRootNavigator provides { pageId, payload ->
+                                    navController.navigate(SettingsSubpageRoute(pageId, payload))
+                                },
                             ) {
                                 destination.content(route.payload) { navController.popBackStack() }
                             }
@@ -334,5 +388,16 @@ private fun HandleDialIntent(onOpenContactsSearch: (prefilledNumber: String) -> 
         val listener = Consumer<Intent>(::handleIntent)
         activity?.addOnNewIntentListener(listener)
         onDispose { activity?.removeOnNewIntentListener(listener) }
+    }
+}
+
+/** True when the carrier/device exposes a visual-voicemail package to the default dialer. */
+private fun hasVisualVoicemail(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+    val telephony = context.getSystemService(TelephonyManager::class.java) ?: return false
+    return try {
+        !telephony.visualVoicemailPackageName.isNullOrBlank()
+    } catch (_: SecurityException) {
+        false
     }
 }

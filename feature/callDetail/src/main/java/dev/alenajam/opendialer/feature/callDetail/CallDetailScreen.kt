@@ -57,11 +57,14 @@ import dev.alenajam.opendialer.core.common.PermissionUtils
 import dev.alenajam.opendialer.core.common.functional.EventObserver
 import dev.alenajam.opendialer.core.common.telecom.CallAccount
 import dev.alenajam.opendialer.core.common.telecom.CallPlacementResult
+import dev.alenajam.opendialer.core.common.telecom.SimInfo
 import dev.alenajam.opendialer.core.common.ui.CallAccountPicker
 import dev.alenajam.opendialer.core.common.ui.AppIcon
 import dev.alenajam.opendialer.core.common.ui.ContactAvatar
+import dev.alenajam.opendialer.core.common.ui.SimBadge
 import dev.alenajam.opendialer.core.common.ui.contactAvatarColorKey
 import dev.alenajam.opendialer.core.common.ui.LocalAppIcons
+import dev.alenajam.opendialer.core.common.ui.rememberSimInfos
 import dev.alenajam.opendialer.data.calls.CallType
 import dev.alenajam.opendialer.data.calls.CallOption
 import dev.alenajam.opendialer.data.calls.ContactInfo
@@ -80,6 +83,8 @@ fun CallDetailScreen(
     val isAnon = call.value?.isAnonymous() == true
     val isVoicemailNumber = call.value?.isVoicemailNumber == true
     val childCalls = call.value?.childCalls ?: emptyList()
+    // 双卡时给每一通记录标出走的哪张卡（历史里同一号码可能换卡打过）
+    val simInfos = rememberSimInfos()
     var pendingCallNumber by remember { mutableStateOf<String?>(null) }
     var callAccounts by remember { mutableStateOf<List<CallAccount>?>(null) }
     val requestCallPermissions = rememberLauncherForActivityResult(
@@ -177,6 +182,7 @@ fun CallDetailScreen(
                     CallRow(
                         call = detailCall,
                         isVoicemailNumber = isVoicemailNumber,
+                        simInfo = detailCall.phoneAccountId?.toIntOrNull()?.let(simInfos::get),
                         icons = icons,
                     )
                 }
@@ -419,6 +425,7 @@ private fun BottomBar(
 private fun CallRow(
     call: DetailCall,
     isVoicemailNumber: Boolean = false,
+    simInfo: SimInfo? = null,
     icons: dev.alenajam.opendialer.core.common.ui.AppIcons = LocalAppIcons.current
 ) {
     val subtitleColor = if (!isVoicemailNumber && call.type == CallType.MISSED) {
@@ -469,6 +476,9 @@ private fun CallRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = subtitleColor,
                 )
+                if (simInfo != null) {
+                    SimBadge(info = simInfo)
+                }
             }
         }
 

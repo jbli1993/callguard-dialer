@@ -16,6 +16,10 @@ data class DialerCall(
     val countryIso: String? = null,
     val contactInfo: ContactInfo,
     val isVoicemailNumber: Boolean = false,
+    /** 1=CallGuard 拦的，3=系统黑名单；0=不是被拦记录。 */
+    val blockReason: Int = 0,
+    /** 这通电话走的卡（`PhoneAccountHandle.id` = subscriptionId），单卡设备上通常也有值。 */
+    val phoneAccountId: String? = null,
 ) : Serializable {
     companion object {
         fun mapList(list: List<DialerCallEntity>): List<DialerCall> {
@@ -90,6 +94,8 @@ data class DialerCall(
                     childCalls = listOfNotNull(DetailCall.map(call)),
                     countryIso = call.countryIso,
                     isVoicemailNumber = call.isVoicemailNumber,
+                    blockReason = call.blockReason,
+                    phoneAccountId = call.phoneAccountId,
                     contactInfo = ContactInfo(
                         name = call.name,
                         number = contactNumber,

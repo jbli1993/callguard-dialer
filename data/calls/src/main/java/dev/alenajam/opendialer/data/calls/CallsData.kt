@@ -35,6 +35,7 @@ object CallsData {
         Calls.DATE,
         Calls.DURATION,
         Calls.TYPE,
+        Calls.BLOCK_REASON,
         Calls.NEW,
         Calls.CACHED_PHOTO_URI,
         Calls.COUNTRY_ISO,
@@ -46,17 +47,21 @@ object CallsData {
         Calls.CACHED_LOOKUP_URI,
         Calls.POST_DIAL_DIGITS,
         Calls.CACHED_MATCHED_NUMBER,
-        Calls.CACHED_NUMBER_TYPE
+        Calls.CACHED_NUMBER_TYPE,
+        Calls.PHONE_ACCOUNT_ID
     )
 
-    /** Filter out blocked calls and non-video Duo calls. */
+    /**
+     * 只过滤掉无意义的 Duo 非视频通话。
+     *
+     * <p>**不再过滤 `BLOCKED_TYPE`**：被拦的通话是真实发生过的，Google 拨号器就是这么做的
+     * （列表里显示一条带禁行图标的记录）。隐藏它们会让用户以为"没人打过"，也让
+     * 「谁拦的、拦了什么」完全不可追溯。拦的来源看 `block_reason`（1=CallGuard，3=系统名单）。
+     */
     private const val where = """
-            ${Calls.TYPE} != ${Calls.BLOCKED_TYPE}
-            AND (
-                ${Calls.PHONE_ACCOUNT_COMPONENT_NAME} IS NULL
-                OR ${Calls.PHONE_ACCOUNT_COMPONENT_NAME} NOT LIKE 'com.google.android.apps.tachyon%'
-                OR ${Calls.FEATURES} & ${Calls.FEATURES_VIDEO} == ${Calls.FEATURES_VIDEO}
-            )
+            ${Calls.PHONE_ACCOUNT_COMPONENT_NAME} IS NULL
+            OR ${Calls.PHONE_ACCOUNT_COMPONENT_NAME} NOT LIKE 'com.google.android.apps.tachyon%'
+            OR ${Calls.FEATURES} & ${Calls.FEATURES_VIDEO} == ${Calls.FEATURES_VIDEO}
         """
 
     fun getCursor(contentResolver: ContentResolver, uri: Uri): Cursor? = contentResolver.query(
@@ -91,6 +96,8 @@ object CallsData {
                         date = cursor.getLong(cursor.getColumnIndexOrThrow(Calls.DATE)),
                         duration = cursor.getLong(cursor.getColumnIndexOrThrow(Calls.DURATION)),
                         type = type,
+                        blockReason = if (type == Calls.BLOCKED_TYPE)
+                            cursor.getInt(cursor.getColumnIndexOrThrow(Calls.BLOCK_REASON)) else 0,
                         isNew = cursor.getInt(cursor.getColumnIndexOrThrow(Calls.NEW)),
                         photoUri = cursor.getString(cursor.getColumnIndexOrThrow(Calls.CACHED_PHOTO_URI))
                             ?.takeIf { it.isNotBlank() },
@@ -106,6 +113,7 @@ object CallsData {
                         matchedNumber = cursor.getString(cursor.getColumnIndexOrThrow(Calls.CACHED_MATCHED_NUMBER)),
                         numberType = phoneType?.type
                             ?: cursor.getInt(cursor.getColumnIndexOrThrow(Calls.CACHED_NUMBER_TYPE)),
+                        phoneAccountId = cursor.getString(cursor.getColumnIndexOrThrow(Calls.PHONE_ACCOUNT_ID)),
                         isVoicemailNumber = type == Calls.OUTGOING_TYPE && voicemailNumbers.any {
                             PhoneNumberUtils.compare(number, it)
                         },

@@ -1,5 +1,6 @@
 # Gradle files
 .gradle/
+.kotlin/
 build/
 
 # Local configuration file (sdk path, etc)
@@ -13,6 +14,7 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+*.idsig
 output.json
 
 # IntelliJ
@@ -35,3 +37,8 @@ google-services.json
 .DS_Store
 
 .artifacts
+
+# Local build caches (kept inside the project, not on C:)
+.gradle-home/
+.tooling/
+.tmp/

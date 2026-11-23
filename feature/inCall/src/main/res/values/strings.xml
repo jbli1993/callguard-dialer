@@ -14,6 +14,8 @@
     <string name="notification_ongoing_call_title" comment="Active-call notification title. %1$s is the caller name or phone number.">Ongoing call: %1$s</string>
     <string name="notification_outgoing_call_title" comment="Outgoing-call notification title. %1$s is the contact name or phone number.">Calling: %1$s</string>
     <string name="notification_missed_call_title" comment="Missed-call notification title. %1$s is the caller name or phone number.">Missed call from %1$s</string>
+    <string name="notification_missed_calls_title" comment="Group summary title for multiple missed calls.">Missed calls</string>
+    <string name="notification_missed_calls_count" comment="Missed-call notification subtext. %1$d is the number of missed calls.">%1$d missed calls</string>
     <string name="notification_call_back" comment="Notification action that calls back a missed caller.">Call back</string>
     <string name="notification_message" comment="Notification action that starts a text message to the caller.">Message</string>
     <string name="action_answer" comment="Incoming-call button that answers the call.">Answer</string>
@@ -41,4 +43,15 @@
     <string name="action_send" comment="Button that sends the typed quick-response message.">Send</string>
     <string name="action_cancel" comment="Button that closes the quick-response panel without sending a message.">Cancel</string>
     <string name="write_your_own" comment="Option for composing a custom reply instead of using a preset response.">Write your own…</string>
+    <!-- CallGuard 在线查询状态 -->
+    <string name="callguard_lookup_failed">Free lookup failed</string>
+    <string name="callguard_lookup_recheck">Re-check with paid API</string>
+    <string name="callguard_lookup_busy">Looking up…</string>
+    <string name="callguard_source_free">Free API</string>
+    <string name="callguard_source_paid">Paid API</string>
+    <string name="callguard_source_builtin">Built-in list</string>
+    <string name="callguard_meta">%1$s · %2$s</string>
+    <string name="callguard_ago_now">just now</string>
+    <string name="callguard_ago_hours">%1$d h ago</string>
+    <string name="callguard_ago_days">%1$d d ago</string>
 </resources>

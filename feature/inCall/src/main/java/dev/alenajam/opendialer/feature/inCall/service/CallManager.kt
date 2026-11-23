@@ -26,6 +26,7 @@ sealed class CallEvent {
     data class MissedCall(
         val callerName: String?,
         val callerNumber: String,
-        val notificationId: Int
+        val notificationId: Int,
+        val selfManaged: Boolean = false
     ) : CallEvent()
 }
