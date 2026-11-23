@@ -20,6 +20,16 @@ $env:GRADLE_USER_HOME = 'D:\code\opendialer\.gradle-home'
 
 The fork-specific changes are documented in [CALLGUARD-PATCH.md](CALLGUARD-PATCH.md). The base upstream release is **v0.3.4**.
 
+For a signed release, set `ANDROID_KEYSTORE_PATH`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_PASSWORD`, then run
+`:app:assembleRelease`. The maintainer key is `guarddialer.keystore`; its password
+is kept in Windows Credential Manager under `GuardDialer/Keystore` and is not
+committed. Release certificate SHA-256:
+
+```text
+f87d733226a69b85a82bbb7ac2aaf985ad63aa8fd78018bf1d0f2fc1724e2059
+```
+
 ---
 # Upstream OpenDialer
 
