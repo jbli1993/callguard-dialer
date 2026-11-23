@@ -1,4 +1,26 @@
-# OpenDialer
+# Guard Dialer
+
+**Guard Dialer** is a CallGuard-oriented fork of [OpenDialer](https://github.com/oxcened/opendialer), intended to replace the default Android phone app on LineageOS/Android 13+.
+
+- applicationId: `com.callguard.dialer`
+- displays CallGuard's offline region/carrier labels and online spam marks in the in-call UI and notification banner
+- owns only Telecom-managed call notifications; self-managed VoIP calls stay with their app or Telecom
+- grouped missed-call notifications sourced from `CallLog` (summary + per-call children)
+- hides the Voicemail tab when the carrier exposes no visual-voicemail service
+- Apache-2.0, with upstream attribution in [NOTICE](NOTICE)
+
+Build with JDK 21 + Android SDK, as described in the upstream build section below:
+
+```powershell
+$env:JAVA_HOME = 'C:\path\to\jdk-21'
+$env:GRADLE_USER_HOME = 'D:\code\opendialer\.gradle-home'
+.\gradlew.bat :app:assembleDebug
+```
+
+The fork-specific changes are documented in [CALLGUARD-PATCH.md](CALLGUARD-PATCH.md). The base upstream release is **v0.3.4**.
+
+---
+# Upstream OpenDialer
 
 [![Android CI](https://github.com/oxcened/opendialer/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/oxcened/opendialer/actions/workflows/android.yml)
 [![Latest release](https://img.shields.io/github/v/release/oxcened/opendialer?display_name=tag&sort=semver)](https://github.com/oxcened/opendialer/releases/latest)

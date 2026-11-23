@@ -1,0 +1,17 @@
+CallGuard Dialer
+Copyright 2026 CallGuard contributors
+
+This product is a modified fork of OpenDialer:
+https://github.com/oxcened/opendialer
+
+OpenDialer is Copyright its contributors and is licensed under the
+Apache License, Version 2.0. The original license text is retained in
+LICENSE. Modifications in this repository include:
+
+- CallGuard label-provider integration
+- notification ownership / self-managed call handling
+- CallLog-based grouped missed-call notifications
+- conditional voicemail navigation
+- application identity and branding changes
+
+OpenDialer and its contributors are not responsible for this fork.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name" comment="Application name shown in the launcher.">拨号</string>
+    <string name="app_name" comment="Application name shown in the launcher.">来电拨号</string>
     <string name="channel_incoming_calls" comment="Android notification channel for incoming calls.">来电</string>
     <string name="channel_ongoing_calls" comment="Android notification channel for active calls.">通话中</string>
     <string name="channel_outgoing_calls" comment="Android notification channel for outgoing calls.">去电</string>
