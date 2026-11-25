@@ -24,6 +24,7 @@ import android.os.Looper
 import android.telecom.Call
 import android.telecom.TelecomManager
 import android.widget.RemoteViews
+import androidx.annotation.LayoutRes
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.alenajam.opendialer.core.common.CallGuardLabelClient
@@ -207,10 +208,15 @@ class CallNotificationManager @Inject constructor(
         // 自定义 heads-up 布局：两行文字 + 红绿圆按钮。
         // 不用 CallStyle 是因为它的四个槽位放不下标签（person.name 只剩 3 个汉字，
         // setSubText 被忽略），详见 CALLGUARD-PATCH.md。
-        val views = buildCallViews(caller, subtitle, type)
-        builder.setCustomContentView(views)
-        builder.setCustomBigContentView(views)
-        builder.setCustomHeadsUpContentView(views)
+        val collapsedViews = buildCallViews(
+            R.layout.notification_call_custom, caller, subtitle, type
+        )
+        val expandedViews = buildCallViews(
+            R.layout.notification_call_custom_large, caller, subtitle, type
+        )
+        builder.setCustomContentView(collapsedViews)
+        builder.setCustomBigContentView(expandedViews)
+        builder.setCustomHeadsUpContentView(collapsedViews)
 
         // 通知栏折叠/展开状态下的按钮（自定义视图之外，保证下拉后也能直接操作）
         if (type == CallType.INCOMING) {
@@ -279,8 +285,13 @@ class CallNotificationManager @Inject constructor(
      * 文字颜色必须按系统深浅色主题动态设置——RemoteViews 不解析主题属性，
      * 写死黑色的话在深色模式下会看不见。
      */
-    private fun buildCallViews(caller: String, subtitle: String, type: CallType): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.notification_call_custom)
+    private fun buildCallViews(
+        @LayoutRes layoutId: Int,
+        caller: String,
+        subtitle: String,
+        type: CallType
+    ): RemoteViews {
+        val views = RemoteViews(context.packageName, layoutId)
         views.setTextViewText(R.id.call_custom_title, caller)
         views.setTextViewText(R.id.call_custom_subtitle, subtitle)
 

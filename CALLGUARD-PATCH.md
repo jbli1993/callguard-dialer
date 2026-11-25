@@ -20,7 +20,8 @@
 | `feature/inCall/.../service/CallsHandler.kt` | 修改 | 生成 MissedCall 事件时带上 `PROPERTY_SELF_MANAGED` |
 | `app/src/main/AndroidManifest.xml` | 修改 | 注册未接通知 receiver 和 dismiss receiver |
 | `feature/inCall/src/main/res/values{,-zh}/strings.xml` | 修改 | 按钮 / 未接汇总 / 失败 / 来源 / 相对时间文案 |
-| `res/layout/notification_call_custom.xml` | **新增** | 横幅布局：两行文字 + 红绿圆按钮 |
+| `res/layout/notification_call_custom.xml` | **新增** | 折叠 / 横幅布局（48dp）：两行文字 + 48dp 红绿圆按钮 |
+| `res/layout/notification_call_custom_large.xml` | **新增** | 展开态布局（52dp 按钮 + 6dp 上下 padding），避免展开后过空 |
 | `res/drawable/ic_call_answer.xml`</br>`ic_call_decline.xml`</br>`bg_call_answer.xml`</br>`bg_call_decline.xml` | **新增** | 接听/挂断图标（挂断为电话图标转 135°）与圆形按钮背景 |
 
 没有改动：`InCallServiceImpl`、`OngoingCall`、`CallContactResolver`、任何 Hilt 绑定、任何 Gradle 配置。
@@ -270,15 +271,18 @@ callType（「来电」/「通话中」）
 放弃 CallStyle，用 `RemoteViews` 自己画：
 
 ```kotlin
-val views = RemoteViews(context.packageName, R.layout.notification_call_custom)
-views.setTextViewText(R.id.call_custom_title, caller)      // 号码
-views.setTextViewText(R.id.call_custom_subtitle, subtitle) // 归属地 / 标签
-views.setOnClickPendingIntent(R.id.call_custom_decline, declineIntent)
-views.setOnClickPendingIntent(R.id.call_custom_answer, acceptIntent)
+val collapsed = RemoteViews(context.packageName, R.layout.notification_call_custom)
+val expanded = RemoteViews(context.packageName, R.layout.notification_call_custom_large)
+listOf(collapsed, expanded).forEach { views ->
+    views.setTextViewText(R.id.call_custom_title, caller)      // 号码
+    views.setTextViewText(R.id.call_custom_subtitle, subtitle) // 归属地 / 标签
+    views.setOnClickPendingIntent(R.id.call_custom_decline, declineIntent)
+    views.setOnClickPendingIntent(R.id.call_custom_answer, acceptIntent)
+}
 
-builder.setCustomContentView(views)
-builder.setCustomBigContentView(views)
-builder.setCustomHeadsUpContentView(views)
+builder.setCustomContentView(collapsed)
+builder.setCustomBigContentView(expanded)
+builder.setCustomHeadsUpContentView(collapsed)
 ```
 
 布局是「左边两行文字 + 右边红/绿圆按钮」，按钮用 `oval` shape 背景 + 电话图标（挂断版旋转 135°）。
@@ -316,7 +320,7 @@ builder.setCustomHeadsUpContentView(views)
 ### 代价
 
 - 不再被系统识别为"通话通知"（`CallStyle` 的特权），锁屏上的呈现取决于 ROM
-- heads-up 高度有限，两行文字 + 52dp 按钮刚好放得下，再多会被裁
+- 折叠态 / heads-up 的自定义内容高度上限是 48dp（Android 2025 通知模板），所以 `notification_call_custom.xml` 固定 48dp；展开态改用 `notification_call_custom_large.xml`（52dp 按钮 + 6dp 上下 padding），否则折叠进通知栏时圆按钮会被系统上下裁掉
 
 ## 调试提示：来电横幅会盖住标签
 
